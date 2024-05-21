@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "bubble-parser"
+version = "0.1.0"
+description = "This is app with REST API which scrap data from cetatenie.just.ro"
+authors = ["devtolmachev <dev.tolmachev@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aiohttp = "^3.9.5"
+fastapi = "^0.111.0"
+bs4 = "^0.0.2"
+lxml = "^5.2.2"
+aiofiles = "^23.2.1"
+pdfminer-six = "^20231228"
+apscheduler = "^3.10.4"
+
+
+[tool.poetry.group.github.dependencies]
+pre-commit = "^3.7.1"
+
+
+[tool.poetry.group.tests.dependencies]
+pytest = "^8.2.1"
+pytest-xdist = "^3.6.1"
+pytest-asyncio = "^0.23.7"
+
+
+[tool.poetry.group.linters.dependencies]
+ruff = "^0.4.4"
+
+
+[tool.poetry.group.utils.dependencies]
+fake-useragent = "^1.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
