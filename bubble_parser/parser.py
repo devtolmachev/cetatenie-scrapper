@@ -285,6 +285,6 @@ class ParserPDF:
         return [
             i[0]
             for i in filter(
-                None, [re.findall(r"\(\d+/\d+\)", line) for line in lines]
+                None, [re.findall(r"\d+\.", line) for line in lines]
             )
         ]
