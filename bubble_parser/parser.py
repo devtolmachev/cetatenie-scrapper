@@ -190,10 +190,10 @@ class ParserCetatenie:
                         "%d.%m.%Y",
                     ).replace(tzinfo=datetime.UTC)
 
-                    # Collect articles over the last 4 years
+                    # Collect articles over the last 6 years
                     if (
                         datetime.datetime.now(datetime.UTC) - article_date
-                    ).days // 365 > 4:
+                    ).days // 365 > 6:
                         continue
 
                     link = article.find("a")["href"]
