@@ -74,7 +74,7 @@ async def webhook_response(
 
     try:
         async with aiohttp.ClientSession() as session:  # noqa: SIM117
-            async with session.post(url, data=json.dumps(data)):
+            async with session.post(url, json=data):
                 pass
     except Exception as exc:
         data = {
@@ -84,7 +84,7 @@ async def webhook_response(
         }
         logger.exception(exc)
         async with aiohttp.ClientSession() as session:  # noqa: SIM117
-            async with session.post(url, data=json.dumps(data)):
+            async with session.post(url, json=data):
                 pass
     finally:
         scheduler.remove_all_jobs()
