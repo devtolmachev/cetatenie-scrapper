@@ -53,7 +53,11 @@ async def webhook_response(
     try:
         res = await parser.parse_articoluls(request, src_path)
     except Exception as exc:
-        data = {"ok": False, "message": str(exc), "data": exc}
+        data = {
+            "ok": False,
+            "message": str(exc),
+            "data": f"{exc.__class__.__name__}: {exc}",
+        }
     else:
         data = {
             "ok": True,
@@ -61,18 +65,25 @@ async def webhook_response(
             "data": res,
         }
 
-    if not isinstance(res, dict):
-        data = {"ok": False, "message": "Wrong result", "data": res}
+        if not isinstance(res, dict):
+            data = {"ok": False, "message": "Wrong result", "data": str(res)}
 
-    try:
-        async with aiohttp.ClientSession() as session:  # noqa: SIM117
+    async with aiohttp.ClientSession() as session:
+        try:
             async with session.post(url, data=json.dumps(data)):
                 pass
-    except Exception as err:
-        logger.exception(err)
-    finally:
-        scheduler.remove_all_jobs()
-        scheduler.shutdown(wait=False)
+        except Exception as exc:
+            data = {
+                "ok": False,
+                "message": str(exc),
+                "data": f"{exc.__class__.__name__}: {exc}",
+            }
+            logger.exception(exc)
+            async with session.post(url, data=json.dumps(data)):
+                pass
+        finally:
+            scheduler.remove_all_jobs()
+            scheduler.shutdown(wait=False)
 
 
 if __name__ == "__main__":
