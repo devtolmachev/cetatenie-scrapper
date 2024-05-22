@@ -72,22 +72,23 @@ async def webhook_response(
                 "result": {},
             }
 
-    async with aiohttp.ClientSession() as session:
-        try:
+    try:
+        async with aiohttp.ClientSession() as session:  # noqa: SIM117
             async with session.post(url, data=json.dumps(data)):
                 pass
-        except Exception as exc:
-            data = {
-                "ok": False,
-                "message": str(exc),
-                "result": {},
-            }
-            logger.exception(exc)
+    except Exception as exc:
+        data = {
+            "ok": False,
+            "message": str(exc),
+            "result": {},
+        }
+        logger.exception(exc)
+        async with aiohttp.ClientSession() as session:  # noqa: SIM117
             async with session.post(url, data=json.dumps(data)):
                 pass
-        finally:
-            scheduler.remove_all_jobs()
-            scheduler.shutdown(wait=False)
+    finally:
+        scheduler.remove_all_jobs()
+        scheduler.shutdown(wait=False)
 
 
 if __name__ == "__main__":
