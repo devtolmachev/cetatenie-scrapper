@@ -14,6 +14,7 @@ lxml = "^5.2.2"
 aiofiles = "^23.2.1"
 pdfminer-six = "^20231228"
 apscheduler = "^3.10.4"
+loguru = "^0.7.2"
 
 
 [tool.poetry.group.github.dependencies]

@@ -12,5 +12,5 @@ async def test_subscribe() -> None:
     url_receive = "http://127.0.0.1:7654/"
     async with session.post(
         f"http://127.0.0.1:8000/update?url={url_receive}&data={data}"
-    ):
-        pass
+    ) as response:
+        assert (await response.json())["ok"] is True
