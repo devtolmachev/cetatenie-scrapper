@@ -283,8 +283,8 @@ class ParserPDF:
         text = extract_text(path_to_pdf)
         lines = text.split("\n")
         return [
-            i[0]
+            i.group(2)
             for i in filter(
-                None, [re.findall(r"\d+\.", line) for line in lines]
+                None, [re.match(r"(\d+\.) (.+)", string=line) for line in lines]
             )
         ]
