@@ -56,17 +56,21 @@ async def webhook_response(
         data = {
             "ok": False,
             "message": str(exc),
-            "data": f"{exc.__class__.__name__}: {exc}",
+            "result": {},
         }
     else:
         data = {
             "ok": True,
             "message": "the proccess finish successfully",
-            "data": res,
+            "result": res,
         }
 
         if not isinstance(res, dict):
-            data = {"ok": False, "message": "Wrong result", "data": str(res)}
+            data = {
+                "ok": False,
+                "message": f"Wrong result. {res}",
+                "result": {},
+            }
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -76,7 +80,7 @@ async def webhook_response(
             data = {
                 "ok": False,
                 "message": str(exc),
-                "data": f"{exc.__class__.__name__}: {exc}",
+                "result": {},
             }
             logger.exception(exc)
             async with session.post(url, data=json.dumps(data)):
