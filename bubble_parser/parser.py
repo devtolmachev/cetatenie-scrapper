@@ -6,7 +6,6 @@ import asyncio
 import datetime
 import random
 import re
-import shutil
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
@@ -82,7 +81,7 @@ class ParserCetatenie:
         "11": "https://cetatenie.just.ro/ordine-articolul-1-1/",
     }
 
-    @aiohttp_session(sleeps=(0.7, 2))
+    @aiohttp_session(sleeps=(2, 5))
     async def parse_articoluls(  # noqa: C901, PLR0912
         self, session: ClientSession, articoluls_data: dict, path_data: str
     ) -> dict[str, list[dict]]:
@@ -209,13 +208,12 @@ class ParserCetatenie:
         articoluls = {}
         pdf = ParserPDF()
 
-        @aiohttp_session(timeout=2, attempts=2, sleeps=(0.5, 3.0))
         async def collect_numbers(
-            self: ParserCetatenie,  # noqa: ARG001
             path: str,
             dt: datetime.datetime,
             articolul_num: int,
             num: int,
+            url_pdf: str,
         ):
             numbers = await pdf.extract_numbers(path)
 
@@ -226,6 +224,7 @@ class ParserCetatenie:
                         "number_order": number_order,
                         "year": dt.year,
                         "date": dt.strftime("%d.%m.%Y"),
+                        "pdf_link": url_pdf,
                     }
                 )
 
@@ -235,20 +234,24 @@ class ParserCetatenie:
             if not isinstance(res, tuple):
                 continue
 
-            path, dt, articolul_num, num = res
+            path, dt, articolul_num, num, url_pdf = res
 
             if not articoluls.get(f"articolul_{articolul_num}"):
                 articoluls[f"articolul_{articolul_num}"] = []
 
             collect_number_tasks.append(
                 collect_numbers(
-                    self, path=path, dt=dt, articolul_num=articolul_num, num=num
+                    path=path,
+                    dt=dt,
+                    articolul_num=articolul_num,
+                    num=num,
+                    url_pdf=url_pdf,
                 )
             )
 
-        await asyncio.gather(*collect_number_tasks, return_exceptions=True)
+        await asyncio.gather(*collect_number_tasks)
 
-        shutil.rmtree(path_data)
+        # shutil.rmtree(path_data)
         return articoluls
 
     @aiohttp_session(sleeps=(2, 7))
@@ -265,11 +268,10 @@ class ParserCetatenie:
             resp.raise_for_status()
 
             fn = f"{src_path}/{url.split("/")[-1]}"
-            async with aiofiles.open(fn, "ab") as f:
-                async for chunk in resp.content.iter_chunked(1024):
-                    await f.write(chunk)
+            async with aiofiles.open(fn, "wb") as f:
+                await f.write(await resp.read())
 
-            return fn, dt, articolul_num, num
+            return fn, dt, articolul_num, num, url
 
 
 class ParserPDF:
