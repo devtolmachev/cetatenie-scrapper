@@ -209,13 +209,15 @@ class ParserCetatenie:
         articoluls = {}
         pdf = ParserPDF()
 
+        @aiohttp_session(timeout=2, attempts=2, sleeps=(0.5, 3.0))
         async def collect_numbers(
-            path: str, dt: datetime.datetime, articolul_num: int, num: int
+            self: ParserCetatenie,  # noqa: ARG001
+            path: str,
+            dt: datetime.datetime,
+            articolul_num: int,
+            num: int,
         ):
-            try:
-                numbers = await pdf.extract_numbers(path)
-            except asyncio.TimeoutError:
-                return
+            numbers = await pdf.extract_numbers(path)
 
             for number_order in numbers:
                 articoluls[f"articolul_{articolul_num}"].append(
@@ -240,7 +242,7 @@ class ParserCetatenie:
 
             collect_number_tasks.append(
                 collect_numbers(
-                    path=path, dt=dt, articolul_num=articolul_num, num=num
+                    self, path=path, dt=dt, articolul_num=articolul_num, num=num
                 )
             )
 
@@ -249,7 +251,7 @@ class ParserCetatenie:
         shutil.rmtree(path_data)
         return articoluls
 
-    @aiohttp_session()
+    @aiohttp_session(sleeps=(2, 7))
     async def _collect_data(
         self,
         session: ClientSession,
