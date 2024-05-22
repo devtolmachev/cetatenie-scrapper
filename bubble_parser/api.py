@@ -15,6 +15,12 @@ from bubble_parser.parser import ParserCetatenie
 app = FastAPI()
 
 
+@app.post("/is_work")
+async def is_work() -> dict:
+    """Check if server is working."""
+    return {"ok": True, "message": "yes, server working"}
+
+
 @app.post("/update")
 async def subscribe_for_update(url: str, data: str) -> dict:
     """Subscribe for updates."""
