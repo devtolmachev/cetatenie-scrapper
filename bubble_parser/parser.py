@@ -6,6 +6,7 @@ import asyncio
 import datetime
 import random
 import re
+import time
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
@@ -225,6 +226,7 @@ class ParserCetatenie:
                         "year": dt.year,
                         "date": dt.strftime("%d.%m.%Y"),
                         "pdf_link": url_pdf,
+                        "timestamp": time.time()
                     }
                 )
 
