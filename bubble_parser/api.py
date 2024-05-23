@@ -21,6 +21,13 @@ async def is_work() -> dict:
     return {"ok": True, "message": "yes, server working"}
 
 
+@app.post("/get_updates")
+async def get_updates(data: str) -> dict:
+    """Get updates."""
+    request = json.loads(data)
+    return await get_result(request=request)
+
+
 @app.post("/update")
 async def subscribe_for_update(url: str, data: str) -> dict:
     """Subscribe for updates."""
@@ -44,18 +51,17 @@ async def subscribe_for_update(url: str, data: str) -> dict:
     }
 
 
-async def webhook_response(
-    url: str, request: dict, scheduler: AsyncIOScheduler
-) -> None:
-    """Send webhook response."""
+async def get_result(request: dict) -> dict:
+    """Get results."""
     parser = ParserCetatenie()
     src_path = f"{time.time()}_{len(str(request))}"
     try:
         res = await parser.parse_articoluls(request, src_path)
     except Exception as exc:
+        logger.exception(exc)
         data = {
             "ok": False,
-            "message": str(exc),
+            "message": f"{exc.__class__.__name__}: {exc!s}",
             "result": {},
         }
     else:
@@ -68,9 +74,19 @@ async def webhook_response(
         if not isinstance(res, dict):
             data = {
                 "ok": False,
-                "message": f"Wrong result. {res}",
+                "message": f"Wrong result: {res}",
                 "result": {},
             }
+    
+    return data
+    
+
+
+async def webhook_response(
+    url: str, request: dict, scheduler: AsyncIOScheduler
+) -> None:
+    """Send webhook response."""
+    data = await get_result(request=request)
 
     try:
         async with aiohttp.ClientSession() as session:  # noqa: SIM117
@@ -79,7 +95,7 @@ async def webhook_response(
     except Exception as exc:
         data = {
             "ok": False,
-            "message": str(exc),
+            "message": f"{exc.__class__.__name__}: {exc!s}",
             "result": {},
         }
         logger.exception(exc)
@@ -89,6 +105,7 @@ async def webhook_response(
     finally:
         scheduler.remove_all_jobs()
         scheduler.shutdown(wait=False)
+        del scheduler
 
 
 if __name__ == "__main__":

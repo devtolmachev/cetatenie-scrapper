@@ -6,6 +6,7 @@ import asyncio
 import datetime
 import random
 import re
+import shutil
 import time
 from functools import wraps
 from pathlib import Path
@@ -82,7 +83,7 @@ class ParserCetatenie:
         "11": "https://cetatenie.just.ro/ordine-articolul-1-1/",
     }
 
-    @aiohttp_session(sleeps=(2, 5))
+    @aiohttp_session(sleeps=(4, 10), attempts=10, timeout=6)
     async def parse_articoluls(  # noqa: C901, PLR0912
         self, session: ClientSession, articoluls_data: dict, path_data: str
     ) -> dict[str, list[dict]]:
@@ -253,10 +254,10 @@ class ParserCetatenie:
 
         await asyncio.gather(*collect_number_tasks)
 
-        # shutil.rmtree(path_data)
+        shutil.rmtree(path_data)
         return articoluls
 
-    @aiohttp_session(sleeps=(2, 7))
+    @aiohttp_session(sleeps=(4, 10), attempts=7)
     async def _collect_data(
         self,
         session: ClientSession,
