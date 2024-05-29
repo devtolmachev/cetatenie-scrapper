@@ -11,7 +11,7 @@ import shutil
 import time
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Coroutine, List
 
 import aiofiles
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
@@ -123,75 +123,31 @@ class ParserCetatenie:
     }
 
     @aiohttp_session(sleeps=(4, 10), attempts=10, timeout=3)
-    async def parse_articoluls(  # noqa: C901, PLR0912
+    async def _collect_scrapping_tasks(
         self, session: ClientSession, articoluls_data: dict, path_data: str
-    ) -> dict[str, list[dict]]:
-        """Parse new articles.
+    ) -> List[Coroutine]:
+        """Collect correctly tasks for scrapping articoluls.
 
         Parameters
         ----------
         session : ClientSession
-            generated arg.
+            generated aiohttp session.
         articoluls_data : dict
-            like
-            `{
-                “articul_10“: [“932P”, “931P”, “815P”, “828P”],
-                “articul_11“: [“132P”, “231P”, “215P”, “328P”]
-            }`.
+            request body.
         path_data : str
-            path to save downloaded PDF's.
+            path that will passed to tasks.
 
         Returns
         -------
-        dict[str, list[dict]]
-            dictionary with only updated articles. like
-
-            `{
-                “articul_10“: [{
-                    "list_name": "932P",
-                    "number_order": "(16309/2020)",
-                    "year": 2024,
-                    "date": "16.05.2024"
-                    },
-                    {
-                    "list_name": "933P",
-                    "number_order": "(16309/2020)",
-                    "year": 2024,
-                    "date": "16.05.2024"
-                    }],
-                “articul_11“: [{
-                    "list_name": "934P",
-                    "number_order": "(16309/2020)",
-                    "year": 2024,
-                    "date": "16.05.2024"
-                    },
-                    {
-                    "list_name": "935P",
-                    "number_order": "(16309/2020)",
-                    "year": 2024,
-                    "date": "16.05.2024"
-                    }]
-            }`.
+        List[Coroutine]
+            list with tasks. you need to call `asyncio.gather(tasks)`
 
         Raises
         ------
         TypeError
-            if articoluls_data keys don't validated.
+            if articoluls data is wrong
         """
-        # return {"articolul_10": [
-        #     {
-        #         "list_name": "565P",
-        #         "number_order": "12121/34534",
-        #         "year": "2022",
-        #         "date": "18.07.20022",
-        #         "pdf_link": "hjgjhghjghj",
-        #         "timestamp": time.time(),
-        #     }
-        # ]
-        # }
         tasks = []
-        # Create path for PDF's
-        Path(path_data).mkdir(parents=True, exist_ok=True)
 
         for articolul in articoluls_data:
             if not articolul.split("_")[-1].isdigit():
@@ -230,12 +186,6 @@ class ParserCetatenie:
                     if article.find("a") is None:
                         continue
 
-                    num = article.find("a").text
-
-                    # If num in request data. Means this article is old
-                    if num in articoluls_data[articolul]:
-                        continue
-
                     # Get raw datetime article
                     _article_date = re.findall(r"\d+\.\d+\.\d+", article.text)
                     if not _article_date:
@@ -245,6 +195,18 @@ class ParserCetatenie:
                         _article_date[0],
                         "%d.%m.%Y",
                     ).replace(tzinfo=datetime.UTC)
+
+                    # If this year not in request data, continue it
+                    if str(article_date.year) not in articoluls_data[articolul]:
+                        continue
+
+                    # If num in request data. Means this article is old
+                    num = article.find("a").text
+                    if (
+                        num
+                        in articoluls_data[articolul][str(article_date.year)]
+                    ):
+                        continue
 
                     # Collect articles over the last 6 years
                     if (
@@ -262,7 +224,44 @@ class ParserCetatenie:
                     )
                     tasks.append(task)
 
+        return tasks
+
+    async def parse_articoluls(
+        self, articoluls_data: dict, path_data: str
+    ) -> dict[str, list[dict]]:
+        """Parse new articles.
+
+        Parameters
+        ----------
+        session : ClientSession
+            generated arg.
+        articoluls_data : dict
+            like
+            `{
+                "articolul_10": {
+                    "2022": [“932P”, “931P”, “815P”, “828P”],
+                    "2023": [“932P”, “931P”, “815P”, “828P”]
+                }
+            }`
+        path_data : str
+            path to save downloaded PDF's.
+
+        Returns
+        -------
+        dict[str, list[dict]]
+            dictionary with only updated articles. like
+
+        Raises
+        ------
+        TypeError
+            if articoluls_data keys don't validated.
+        """
+        # Create path for PDF's
+        Path(path_data).mkdir(parents=True, exist_ok=True)
+
+        tasks = await self._collect_scrapping_tasks(articoluls_data, path_data)
         articoluls = {}
+
         pdf = ParserPDF()
 
         async def collect_numbers(
@@ -273,7 +272,6 @@ class ParserCetatenie:
             url_pdf: str,
         ):
             numbers = await asyncio.to_thread(pdf.extract_numbers, path)
-
             for number_order in numbers:
                 articoluls[f"articolul_{articolul_num}"].append(
                     {
@@ -288,6 +286,7 @@ class ParserCetatenie:
 
         collect_number_tasks = []
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
         for res in results:
             if not isinstance(res, tuple):
                 continue
@@ -359,13 +358,13 @@ class ParserPDF:
         ]
 
 
-async def main():
+async def main() -> None:  # noqa: D103
     p = ParserCetatenie()
-    data = {"articolul_10": [], "articolul_11": []}
+    data = {"articolul_10": {"2024": []}, "articolul_11": {"2024": []}}
     src_path = f"{time.time()}_{len(str(data))}"
     result = await p.parse_articoluls(data, src_path)
-    
-    with open("result.json", "w") as f:
+
+    with open("result.json", "w") as f:  # noqa: ASYNC101
         f.write(json.dumps(result, indent=2))
 
 

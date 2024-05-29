@@ -8,7 +8,9 @@ import pytest
 async def test_subscribe() -> None:
     """Test for subscribtion."""
     session = aiohttp.ClientSession()
-    data = json.dumps({"articolul_10": ["925P"], "articolul_11": ["935P"]})
+    data = json.dumps(
+        {"articolul_10": {"2024": ["925P"]}, "articolul_11": {"2024": ["925P"]}}
+    )
     url_receive = "http://127.0.0.1:7654/"
     async with session.post(
         f"http://127.0.0.1:8000/update?url={url_receive}&data={data}"
@@ -20,7 +22,14 @@ async def test_subscribe() -> None:
 async def test_get_updates() -> None:
     """Test for /get_updates endpoint."""
     session = aiohttp.ClientSession()
-    data = json.dumps({"articolul_10": [], "articolul_11": []})
+    data = json.dumps(
+        json.dumps(
+            {
+                "articolul_10": {"2024": ["925P"]},
+                "articolul_11": {"2024": ["925P"]},
+            }
+        )
+    )
     async with session.post(
         f"http://127.0.0.1:8000/get_updates?data={data}"
     ) as resp:
