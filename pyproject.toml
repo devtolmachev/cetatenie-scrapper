@@ -16,6 +16,9 @@ pdfminer-six = "^20231228"
 apscheduler = "^3.10.4"
 loguru = "^0.7.2"
 playwright = "^1.44.0"
+sqlalchemy = "^2.0.30"
+asyncpg = "^0.29.0"
+envyaml = "^1.10.211231"
 
 
 [tool.poetry.group.github.dependencies]

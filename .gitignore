@@ -7,6 +7,8 @@ __pycache__/
 *.pkl
 171*
 pdfs
+.ruff_cache/
+docker/**/volume
 
 # C extensions
 *.so

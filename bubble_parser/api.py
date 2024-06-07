@@ -10,6 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from loguru import logger
 
+from bubble_parser.database import write_result
 from bubble_parser.parser import ParserCetatenie
 
 app = FastAPI()
@@ -18,6 +19,7 @@ app = FastAPI()
 @app.post("/is_work")
 async def is_work() -> dict:
     """Check if server is working."""
+    logger.info("/is_work trigerred")
     return {"ok": True, "message": "yes, server working"}
 
 
@@ -25,6 +27,7 @@ async def is_work() -> dict:
 async def get_updates(data: str) -> dict:
     """Get updates."""
     request = json.loads(data)
+    logger.info(f"/get_updates trigerred with data - {data}")
     return await get_result(request=request)
 
 
@@ -41,6 +44,8 @@ async def subscribe_for_update(url: str, data: str) -> dict:
         timezone="utc",
     )
     scheduler.start()
+    
+    logger.info(f"/update trigerred with data - {data}. scheduler started")
 
     return {
         "ok": True,
@@ -66,20 +71,26 @@ async def get_result(request: dict) -> dict:
         }
     else:
         data = {
-            "ok": True,
-            "message": "the proccess finish successfully",
-            "result": res,
+            "ok": False,
+            "message": f"Wrong result: {res}",
+            "result": {},
         }
 
-        if not isinstance(res, dict):
+        if isinstance(res, dict):
             data = {
-                "ok": False,
-                "message": f"Wrong result: {res}",
-                "result": {},
+                "ok": True,
+                "message": "the proccess finish successfully",
+                "result": res,
             }
-    
+
+            try:
+                for articolul in res:
+                    articolul_num = int(articolul[-2:])
+                    await write_result(articolul_num, res[articolul])
+            except Exception as exc:
+                logger.exception(exc)
+
     return data
-    
 
 
 async def webhook_response(

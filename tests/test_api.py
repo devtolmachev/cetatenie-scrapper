@@ -22,14 +22,7 @@ async def test_subscribe() -> None:
 async def test_get_updates() -> None:
     """Test for /get_updates endpoint."""
     session = aiohttp.ClientSession()
-    data = json.dumps(
-        json.dumps(
-            {
-                "articolul_10": {"2024": ["925P"]},
-                "articolul_11": {"2024": ["925P"]},
-            }
-        )
-    )
+    data = json.dumps({"articolul_10": {"2024": ["925P"]}})
     async with session.post(
         f"http://127.0.0.1:8000/get_updates?data={data}"
     ) as resp:

@@ -2,8 +2,26 @@ version: "3.8"
 
 services:
   parser:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
     volumes:
       - .:/app
     ports:
       - 8000:8000
+    restart: on-failure
+    depends_on:
+      - postgres
+  
+  postgres:
+    image: postgres:16.3
+
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    
+    restart: on-failure
+
+    volumes:
+      - ./docker/postgres/volume:/var/lib/postgresql/data

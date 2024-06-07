@@ -78,7 +78,11 @@ def aiohttp_session(
 
 
 HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8,application/"
+        "signed-exchange;v=b3;q=0.7"
+    ),
     "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,my;q=0.6",
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
@@ -88,8 +92,13 @@ HEADERS = {
     "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "sec-ch-ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "sec-ch-ua": (
+        '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"'
+    ),
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Linux"',
 }
@@ -325,8 +334,6 @@ class ParserCetatenie:
             headers = PDF_HEADERS
             headers["User-Agent"] = session.headers["User-Agent"]
             session._default_headers = headers
-
-            await asyncio.sleep(random.uniform(3, 7))
 
             async with session.get(url) as resp:
                 resp.raise_for_status()
