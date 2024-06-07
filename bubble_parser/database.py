@@ -10,11 +10,18 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from bubble_parser import get_config
+from bubble_parser.models import Base
 from bubble_parser.repositories import (
     ArticolulPDFRepository,
     ArticolulRepository,
 )
 from bubble_parser.types import Articolul, ArticolulPDF
+
+
+async def setup_db() -> None:
+    """Create all tables in database."""
+    async with create_sqlalchemy_async_engine() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 
 def create_sqlalchemy_async_engine() -> AsyncEngine:

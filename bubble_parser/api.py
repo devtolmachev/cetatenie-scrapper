@@ -1,5 +1,6 @@
 """Contain a REST API."""
 
+import asyncio
 import json
 import time
 from datetime import UTC, datetime, timedelta
@@ -10,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from loguru import logger
 
-from bubble_parser.database import write_result
+from bubble_parser.database import setup_db, write_result
 from bubble_parser.parser import ParserCetatenie
 
 app = FastAPI()
@@ -120,4 +121,5 @@ async def webhook_response(
 
 
 if __name__ == "__main__":
+    asyncio.run(setup_db())
     uvicorn.run(app, host="0.0.0.0", port=8000)
