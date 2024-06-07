@@ -15,12 +15,12 @@ from bubble_parser.repositories import (
     ArticolulPDFRepository,
     ArticolulRepository,
 )
-from bubble_parser.types import Articolul, ArticolulPDF
+from bubble_parser.app_types import Articolul, ArticolulPDF
 
 
 async def setup_db() -> None:
     """Create all tables in database."""
-    async with create_sqlalchemy_async_engine() as conn:
+    async with create_sqlalchemy_async_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 

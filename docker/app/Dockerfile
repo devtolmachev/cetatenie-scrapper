@@ -1,6 +1,6 @@
 FROM python:3.12
 
-RUN pip install poetry
+RUN pip install poetry 
 
 WORKDIR /app
 
@@ -10,4 +10,4 @@ RUN poetry install --no-root --no-interaction --no-ansi
 
 COPY . /app
 EXPOSE 8000
-CMD poetry run python3 bubble_parser/api.py
+ENTRYPOINT PYTHONPATH=`pwd` python3 bubble_parser/api.py

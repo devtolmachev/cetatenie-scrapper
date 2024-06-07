@@ -16,9 +16,9 @@ from sqlalchemy import (
     update,
 )
 
+from bubble_parser.app_types import Articolul, ArticolulPDF, dump_without_null
 from bubble_parser.models import Articolul as ArticolulTable
 from bubble_parser.models import ArticolulPDF as ArticolulPDFTable
-from bubble_parser.types import Articolul, ArticolulPDF, dump_without_null
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession

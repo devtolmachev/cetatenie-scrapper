@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "bubble-parser"
 version = "0.1.0"
-description = "This is app with REST API which scrap data from cetatenie.just.ro"
+description = "This is app with REST API which scrap data from cetatenie.just.ro "
 authors = ["devtolmachev <dev.tolmachev@gmail.com>"]
 readme = "README.md"
 
