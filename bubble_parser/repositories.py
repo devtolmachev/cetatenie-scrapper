@@ -113,12 +113,10 @@ class ArticolulRepository(SQLAlchemyRepository):
         )
         res = await super().get(stmt)
         return Articolul(**res.fetchone()._mapping)
-    
+
     async def get_by_num(self, articolul_num: int) -> Articolul:
         """Get articolul by articolul num from repository."""
-        stmt = select(self._model).where(
-            self._model.number == articolul_num
-        )
+        stmt = select(self._model).where(self._model.number == articolul_num)
         res = await super().get(stmt)
         data = res.fetchone()
         if not data:

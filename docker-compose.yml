@@ -21,5 +21,8 @@ services:
     
     restart: on-failure
 
+    ports:
+      - "5432:5432"
+
     volumes:
       - ./docker/postgres/volume:/var/lib/postgresql/data
