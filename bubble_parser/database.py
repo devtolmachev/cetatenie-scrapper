@@ -31,7 +31,9 @@ def create_sqlalchemy_async_engine() -> AsyncEngine:
         f"postgresql+asyncpg://{cfg["user"]}:{cfg["password"]}@"
         f"{cfg["host"]}:{cfg["port"]}/{cfg["dbname"]}"
     )
-    return create_async_engine(url).execution_options(autocommit=True)
+    return create_async_engine(url).execution_options(
+        isolation_level="AUTOCOMMIT"
+    )
 
 
 async def write_result(articolul_num: int, pdfs: list[dict]) -> None:
