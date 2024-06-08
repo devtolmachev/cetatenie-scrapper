@@ -55,6 +55,7 @@ async def write_result(articolul_num: int, pdfs: list[dict]) -> None:
         for pdf in pdfs:
             articolur_pdf = ArticolulPDF(
                 list_name=pdf["list_name"],
+                articolul_num=articolul_num,
                 number_order=pdf["number_order"],
                 date=datetime.strptime(pdf["date"], "%d.%m.%Y"),
                 url=pdf["pdf_link"],
@@ -66,4 +67,3 @@ async def write_result(articolul_num: int, pdfs: list[dict]) -> None:
         start = datetime.now()
         await asyncio.gather(*tasks)
         print(datetime.now() - start, len(tasks))
-        ...

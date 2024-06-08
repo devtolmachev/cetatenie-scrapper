@@ -22,6 +22,7 @@ class ArticolulPDF(Base):
 
     __tablename__ = "pdfs"
     pdf_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    articolul_num: Mapped[int] = mapped_column(Integer)
     list_name: Mapped[str] = mapped_column(VARCHAR(15))
     number_order: Mapped[str] = mapped_column(VARCHAR(150))
     date: Mapped[datetime] = mapped_column(DateTime(timezone=False))

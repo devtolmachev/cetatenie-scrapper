@@ -20,6 +20,7 @@ class ArticolulPDF(BaseModel):
     """PDF Articolul Type."""
     
     pdf_id: int | NULL = NULL
+    articolul_num: int
     list_name: str
     number_order: str
     date: datetime
