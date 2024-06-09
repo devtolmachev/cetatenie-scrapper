@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import (
     CursorResult,
@@ -15,6 +15,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.exc import IntegrityError
 
 from bubble_parser.app_types import Articolul, ArticolulPDF, dump_without_null
 from bubble_parser.models import Articolul as ArticolulTable
@@ -72,6 +73,7 @@ class SQLAlchemyRepository(AbstractRepository):
     async def get(
         self, stmt: Select, stream: bool = False
     ) -> CursorResult | AsyncResult:
+        """Get entity from repository."""
         return await self._execute_stmt(stmt, stream=stream)
 
     async def update(self, stmt: Update) -> CursorResult:
@@ -137,7 +139,7 @@ class ArticolulRepository(SQLAlchemyRepository):
 class ArticolulPDFRepository(SQLAlchemyRepository):
     _model = ArticolulPDFTable
 
-    async def create(self, pdf: ArticolulPDF) -> int:
+    async def create(self, pdf: ArticolulPDF) -> Optional[int]:
         r"""
         Create pdf in repository, return articolul pdf
         repository-id.
@@ -147,7 +149,10 @@ class ArticolulPDFRepository(SQLAlchemyRepository):
             .values(**dump_without_null(pdf))
             .returning(self._model.pdf_id)
         )
-        return await super().create(stmt)
+        try:
+            return await super().create(stmt)
+        except (IntegrityError, Exception):
+            return None
 
     async def delete(self, pdf_id: int) -> None:
         """Delete pdf from repository."""

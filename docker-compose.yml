@@ -8,6 +8,10 @@ services:
     ports:
       - 8000:8000
     restart: on-failure
+    working_dir: /app
+    environment:
+      - POSTGRES_HOST=postgres
+      - PYTHONUNBUFFERED=1
     depends_on:
       - postgres
   
@@ -26,3 +30,10 @@ services:
 
     volumes:
       - ./docker/postgres/volume:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 60s
+      retries: 5

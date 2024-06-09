@@ -10,4 +10,4 @@ RUN poetry install --no-root --no-interaction --no-ansi
 
 COPY . /app
 EXPOSE 8000
-ENTRYPOINT PYTHONPATH=`pwd` python3 bubble_parser/api.py
+ENTRYPOINT python3 bubble_parser/api.py

@@ -2,5 +2,5 @@ postgres:
   dbname: ${POSTGRES_DB}
   user: postgres
   password: ${POSTGRES_PASSWORD}
-  host: postgres
+  host: 127.0.0.1
   port: 5432

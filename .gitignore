@@ -4,11 +4,13 @@ __pycache__/
 *$py.class
 
 # Custom
+docker/postgres/volume/pgdata
 *.pkl
 171*
 pdfs
 .ruff_cache/
 docker/**/volume
+.vscode/
 
 # C extensions
 *.so

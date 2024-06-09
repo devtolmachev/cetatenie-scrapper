@@ -19,6 +19,8 @@ playwright = "^1.44.0"
 sqlalchemy = "^2.0.30"
 asyncpg = "^0.29.0"
 envyaml = "^1.10.211231"
+alembic = "^1.13.1"
+psycopg2 = "^2.9.9"
 
 
 [tool.poetry.group.github.dependencies]

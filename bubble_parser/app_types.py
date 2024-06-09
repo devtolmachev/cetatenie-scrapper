@@ -24,6 +24,7 @@ class ArticolulPDF(BaseModel):
     list_name: str
     number_order: str
     date: datetime
+    year: int
     url: str
     parsed_at: int
 

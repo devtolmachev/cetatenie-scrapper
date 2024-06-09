@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
+    async_scoped_session,
     async_sessionmaker,
     create_async_engine,
 )
 
 from bubble_parser import get_config
+from bubble_parser.app_types import Articolul, ArticolulPDF
 from bubble_parser.models import Base
 from bubble_parser.repositories import (
     ArticolulPDFRepository,
     ArticolulRepository,
 )
-from bubble_parser.app_types import Articolul, ArticolulPDF
 
 
 async def setup_db() -> None:
@@ -27,6 +29,11 @@ async def setup_db() -> None:
 def create_sqlalchemy_async_engine() -> AsyncEngine:
     """Return sqlalchemy async engine from config."""
     cfg = get_config()["postgres"]
+    host = os.getenv("POSTGRES_HOST")
+    
+    if host:
+        cfg["host"] = host
+        
     url = (
         f"postgresql+asyncpg://{cfg["user"]}:{cfg["password"]}@"
         f"{cfg["host"]}:{cfg["port"]}/{cfg["dbname"]}"
@@ -42,28 +49,30 @@ async def write_result(articolul_num: int, pdfs: list[dict]) -> None:
     session = async_sessionmaker(
         create_sqlalchemy_async_engine(), expire_on_commit=False
     )
-    async with session() as db:
+    scoped_sessionmaker = async_scoped_session(session, asyncio.current_task)
+    async with scoped_sessionmaker() as db:
         repository = ArticolulRepository(db)
         articolul = await repository.get_by_num(articolul_num=articolul_num)
         if not articolul:
             articolul = Articolul(number=articolul_num)
             await repository.create(articolul=articolul)
 
-    async with session() as db:
+    async with scoped_sessionmaker() as db:
         repository = ArticolulPDFRepository(db)
         tasks = []
         for pdf in pdfs:
+            pdf_date = datetime.strptime(pdf["date"], "%d.%m.%Y")
             articolur_pdf = ArticolulPDF(
-                list_name=pdf["list_name"],
                 articolul_num=articolul_num,
+                list_name=pdf["list_name"],
                 number_order=pdf["number_order"],
-                date=datetime.strptime(pdf["date"], "%d.%m.%Y"),
+                date=pdf_date,
+                year=pdf_date.year,
                 url=pdf["pdf_link"],
                 parsed_at=int(pdf["timestamp"]),
             )
-            tasks.append(
-                repository.create(articolur_pdf)
-            )
+            tasks.append(repository.create(articolur_pdf))
+
         start = datetime.now()
         await asyncio.gather(*tasks)
         print(datetime.now() - start, len(tasks))
