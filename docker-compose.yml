@@ -12,6 +12,7 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     depends_on:
       - postgres
   

@@ -159,7 +159,8 @@ class ArticolulPDFRepository(SQLAlchemyRepository):
         try:
             return await super().create(stmt)
         except IntegrityError as e:
-            logger.exception(e)
+            if not "already exists" in str(e):
+                logger.exception(e)
             return None
 
     async def delete(self, pdf_id: int) -> None:
@@ -199,7 +200,8 @@ class DosarRepository(SQLAlchemyRepository):
         try:
             await super().create(stmt)
         except IntegrityError as e:
-            logger.exception(e)
+            if not "already exists" in str(e):
+                logger.exception(e)
             return None
 
     async def delete(self, record_id: int) -> None:
