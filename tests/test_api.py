@@ -36,7 +36,7 @@ async def test_dosars() -> None:
     session = aiohttp.ClientSession()
     url = "http://127.0.0.1:7654"
     async with session.post(
-        f"http://127.0.0.1:8000/get_dosars"
+        f"http://127.0.0.1:8000/get_dosars?url={url}&data=11"
     ) as resp:
         response = await resp.json()
         print(response)

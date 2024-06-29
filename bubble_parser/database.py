@@ -142,8 +142,5 @@ async def write_dosars_by_parts(dosars: list[Dosar]):
     """
     parts = divide_list(dosars, 1000)
 
-    group_by = 4
-    for _ in range(int(len(parts) / group_by)):
-        tasks = [write_dosars(p) for p in parts[:group_by]]
-        await asyncio.gather(*tasks)
-        del parts[:group_by]
+    tasks = [write_dosars(ds) for ds in parts]
+    await asyncio.gather(*tasks)

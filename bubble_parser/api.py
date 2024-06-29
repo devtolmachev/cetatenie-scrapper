@@ -38,13 +38,12 @@ async def get_updates(data: str) -> dict:
 
 
 @app.post("/get_dosars")
-async def get_dosars(data: Optional[str] = None, url: Optional[str] = None):
+async def get_dosars(data: Optional[int] = None, url: Optional[str] = None):
     """Get dosars."""
     if not data:
         articoluls = None
     else:
-        request = json.loads(data)
-        articoluls = request["articoluls"]
+        articoluls = int(data)
 
     scheduler = AsyncIOScheduler()
     date = datetime.now().astimezone(UTC) + timedelta(seconds=1)
@@ -108,8 +107,7 @@ async def process_dosars(articolul_num: int | None, url: str = None):
 
     @aiohttp_session(timeout=10)
     async def send_request(_, session: aiohttp.ClientSession):
-        async with session.post(url, json=msg) as r:
-            pass
+        await session.post(url, json=msg)
 
     if url:
         try:
