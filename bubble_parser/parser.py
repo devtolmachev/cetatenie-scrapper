@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import datetime
-import pickle
 import random
 import re
 import shutil
@@ -490,9 +489,9 @@ class ParserDosars:
 
 
 async def main() -> None:  # noqa: D103
-    p = ParserPDF()
+    ParserPDF()
     s = ParserDosars()
-    result = await s.parse_dosars()
+    await s.parse_dosars()
     ...
 
 

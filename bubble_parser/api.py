@@ -56,7 +56,7 @@ async def get_dosars(data: Optional[str] = None, url: Optional[str] = None):
 
     return {
         "ok": True,
-        "message": f"process started",
+        "message": "process started",
     }
 
 
@@ -106,7 +106,7 @@ async def process_dosars(articolul_num: int | None, url: str = None):
 
     @aiohttp_session(timeout=10)
     async def send_request(_, session: aiohttp.ClientSession):
-        async with session.post(url, json=msg) as r:
+        async with session.post(url, json=msg):
             pass
 
     if url:
