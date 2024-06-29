@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 from datetime import UTC, datetime, timedelta
+from typing import Optional
 
 import aiohttp
 import uvicorn
@@ -11,8 +12,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from loguru import logger
 
-from bubble_parser.database import setup_db, write_result
-from bubble_parser.parser import ParserCetatenie
+from bubble_parser.database import (
+    setup_db,
+    write_dosars_by_parts,
+    write_result,
+)
+from bubble_parser.parser import ParserCetatenie, ParserDosars, aiohttp_session
 
 app = FastAPI()
 
@@ -32,6 +37,31 @@ async def get_updates(data: str) -> dict:
     return await get_result(request=request)
 
 
+@app.post("/get_dosars")
+async def get_dosars(data: Optional[str] = None, url: Optional[str] = None):
+    """Get dosars."""
+    if not data:
+        articoluls = None
+    else:
+        request = json.loads(data)
+        articoluls = request["articoluls"]
+
+    scheduler = AsyncIOScheduler()
+    date = datetime.now().astimezone(UTC) + timedelta(seconds=1)
+    scheduler.add_job(
+        process_dosars,
+        args=(articoluls, url),
+        run_date=date,
+        timezone="utc",
+    )
+    scheduler.start()
+
+    return {
+        "ok": True,
+        "message": f"process started",
+    }
+
+
 @app.post("/update")
 async def subscribe_for_update(url: str, data: str) -> dict:
     """Subscribe for updates."""
@@ -45,7 +75,7 @@ async def subscribe_for_update(url: str, data: str) -> dict:
         timezone="utc",
     )
     scheduler.start()
-    
+
     logger.info(f"/update trigerred with data - {data}. scheduler started")
 
     return {
@@ -55,6 +85,37 @@ async def subscribe_for_update(url: str, data: str) -> dict:
             f" we will send new data to the URL: {url}.",
         ),
     }
+
+
+async def process_dosars(articolul_num: int | None, url: str = None):
+    p = ParserDosars()
+    dosars = await p.parse_dosars(articolul_num=articolul_num)
+
+    try:
+        await write_dosars_by_parts(dosars)
+        msg = {
+            "ok": True,
+            "message": f"{len(dosars)} dosars written to db",
+            "dosars": [d.model_dump_json(indent=2) for d in dosars],
+        }
+    except Exception as e:
+        logger.exception(e)
+        msg = {
+            "ok": False,
+            "message": f"write dosars to db was failed with error {str(e)}",
+            "dosars": [d.model_dump_json() for d in dosars],
+        }
+
+    @aiohttp_session(timeout=10)
+    async def send_request(_, session: aiohttp.ClientSession):
+        async with session.post(url, json=msg) as r:
+            pass
+
+    if url:
+        try:
+            await send_request("")
+        except Exception as e:
+            logger.exception(e)
 
 
 async def get_result(request: dict) -> dict:
@@ -121,5 +182,10 @@ async def webhook_response(
 
 
 if __name__ == "__main__":
+    logger.add(
+        "log_{time}.log",
+        level="INFO",
+        rotation="1 day",
+    )
     asyncio.run(setup_db())
     uvicorn.run(app, host="0.0.0.0", port=8000)

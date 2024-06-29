@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional
 
+from loguru import logger
 from sqlalchemy import (
     CursorResult,
     Delete,
@@ -17,9 +18,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import IntegrityError
 
-from bubble_parser.app_types import Articolul, ArticolulPDF, dump_without_null
+from bubble_parser.app_types import (
+    Articolul,
+    ArticolulPDF,
+    dump_without_null,
+    Dosar,
+)
 from bubble_parser.models import Articolul as ArticolulTable
 from bubble_parser.models import ArticolulPDF as ArticolulPDFTable
+from bubble_parser.models import Dosar as DosarTable
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
@@ -151,7 +158,8 @@ class ArticolulPDFRepository(SQLAlchemyRepository):
         )
         try:
             return await super().create(stmt)
-        except (IntegrityError, Exception):
+        except IntegrityError as e:
+            logger.exception(e)
             return None
 
     async def delete(self, pdf_id: int) -> None:
@@ -174,3 +182,43 @@ class ArticolulPDFRepository(SQLAlchemyRepository):
         )
         await super().update(stmt)
         return pdf
+
+
+class DosarRepository(SQLAlchemyRepository):
+    _model = DosarTable
+
+    async def create(self, dosar: Dosar) -> None:
+        r"""
+        Create dosar in repository.
+        """
+        stmt = (
+            insert(self._model)
+            .values(**dump_without_null(dosar))
+            .returning(self._model.record_id)
+        )
+        try:
+            await super().create(stmt)
+        except IntegrityError as e:
+            logger.exception(e)
+            return None
+
+    async def delete(self, record_id: int) -> None:
+        """Delete dosar from repository."""
+        stmt = delete(self._model).where(self._model.record_id == record_id)
+        await super().delete(stmt)
+
+    async def get_by_id(self, record_id: int) -> Dosar:
+        """Get dosar from repository."""
+        stmt = select(self._model).where(self._model.record_id == record_id)
+        res = await super().get(stmt)
+        return Dosar(**res.fetchone()._mapping)
+
+    async def update(self, dosar: Dosar) -> Dosar:
+        """Update dosar in repository."""
+        stmt = (
+            update(self._model)
+            .values(**dump_without_null(dosar))
+            .where(self._model.record_id == dosar.record_id)
+        )
+        await super().update(stmt)
+        return dosar

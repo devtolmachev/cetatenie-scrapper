@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import datetime
-import json
+import pickle
 import random
 import re
 import shutil
@@ -15,9 +16,16 @@ from typing import Any, Callable, Coroutine, List
 
 import aiofiles
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+import aiohttp
+import ua_generator
 from bs4 import BeautifulSoup, Tag
 from fake_useragent import UserAgent
 from pdfminer.high_level import extract_text
+import tempfile
+import fitz
+from dateutil.parser import parse
+
+from bubble_parser.app_types import Dosar
 
 
 def aiohttp_session(
@@ -347,6 +355,21 @@ class ParserCetatenie:
         return await parse(self)
 
 
+def is_date(string, fuzzy=False):
+    """
+    Return whether the string can be interpreted as a date.
+
+    :param string: str, string to check for date
+    :param fuzzy: bool, ignore unknown tokens in string if True
+    """
+    try:
+        parse(string, fuzzy=fuzzy)
+        return True
+
+    except ValueError:
+        return False
+
+
 class ParserPDF:
     """Class which provide methods for parsing pdf."""
 
@@ -364,15 +387,185 @@ class ParserPDF:
             )
         ]
 
+    def _find_columns_for_dosar(self, path_to_pdf: str):
+        pages = fitz.open(path_to_pdf)
+        page = pages[0]
+        obj = page.get_textpage().extractDICT()
+        columns = [
+            span["text"]
+            for block in obj["blocks"]
+            for line in block["lines"]
+            for span in line["spans"]
+            if span["font"].lower().count("bold")
+        ]
+        for c in columns:
+            i = columns.index(c)
+            if c.endswith(" "):
+                columns[i] = f"{c.strip()} {columns.pop(i+1).strip()}"
+        return columns
+
+    def _find_content_for_dosar(self, path_to_pdf: str):
+        pages = fitz.open(path_to_pdf)
+        contents = []
+        columns = self._find_columns_for_dosar(path_to_pdf)
+        for page in pages:
+            obj = page.get_textpage().extractDICT()
+            line_content = []
+            for block in obj["blocks"]:
+                for line in block["lines"]:
+                    if any(
+                        s["font"].lower().count("bold") for s in line["spans"]
+                    ):
+                        continue
+
+                    for span in line["spans"]:
+                        v = span["text"].strip()
+                        line_content.append(v)
+
+                line_raw = "$".join(line_content.copy())
+                if not line_raw:
+                    continue
+                contents.append(line_raw)
+                line_content.clear()
+
+        return columns, contents
+
+    def extract_dosar_data(
+        self, path_to_pdf: str | Path, articolul_num: int, year: int
+    ) -> list[Dosar]:
+        """Parse dosar data from pdf and transform to list of `Dosar`"""
+        if not Path(path_to_pdf).exists():
+            raise FileNotFoundError(path_to_pdf)
+
+        columns, lines = self._find_content_for_dosar(path_to_pdf)
+        return [
+            Dosar(articolul_num=articolul_num, year=year, raw_dosar=raw_dosar)
+            for raw_dosar in lines
+        ]
+
+
+class ParserDosars:
+    urls = {
+        "10": "https://cetatenie.just.ro/stadiu-dosar/#1576832764783-e9f4e574-df23",
+        "11": "https://cetatenie.just.ro/stadiu-dosar/#1576832773102-627a212f-45ce",
+    }
+
+    @property
+    def headers(self):
+        headrs = {
+            "Accept": "*/*",
+            "Accept-Language": "*",
+            "Connection": "keep-alive",
+            "Referer": "https://cetatenie.just.ro/stadiu-dosar/",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        ua = ua_generator.generate(platform=("android", "ios"))
+        for k, v in ua.headers.get().items():
+            headrs[k] = v
+
+        return headrs
+
+    async def _download_pdf(self, url: str, year: int, src_path: str):
+        @aiohttp_session(sleeps=(4, 8), timeout=15)
+        async def parse(self, session: aiohttp.ClientSession):
+            session._default_headers = self.headers
+            async with session.get(url) as resp:
+                content = await resp.read()
+
+            await asyncio.to_thread(resp.raise_for_status)
+
+            fn = str(Path(src_path) / f"{url.split("/")[-1]}")
+
+            async with aiofiles.open(fn, "wb") as f:
+                await f.write(content)
+
+            return fn, year
+
+        return await parse(self)
+
+    async def _parse_dosars(self, articolul_nums: list[int]):
+        @aiohttp_session()
+        async def parse(_, session: aiohttp.ClientSession, articolul_num: int):
+            session._default_headers = self.headers
+            async with session:
+                url = self.urls[str(articolul_num)]
+                async with session.get(url) as resp:
+                    html = await resp.text()
+                soup = BeautifulSoup(html, "lxml")
+                id_panel = url.split("#")[-1]
+                records_raw = (
+                    soup.find("div", class_="vc_tta-panels")
+                    .find("div", id=id_panel)
+                    .find("ul")
+                    .find_all("li")
+                )
+                tasks = []
+                records = []
+                for r in records_raw:
+                    a = r.find("a")
+                    if not a:
+                        continue
+                    records.append((a.string, a["href"]))
+
+                prefix = f"{time.time()}-{articolul_num}-"
+                with tempfile.TemporaryDirectory(prefix=prefix) as tempdir:
+                    dt_now = datetime.datetime.now()
+                    for year, url in records:
+                        if dt_now.year - int(year) > 6:
+                            continue
+
+                        tasks.append(
+                            self._download_pdf(
+                                url=url,
+                                year=year,
+                                src_path=tempdir,
+                            )
+                        )
+                    paths = await asyncio.gather(*tasks, return_exceptions=True)
+                    p = ParserPDF()
+
+                    def _pool():
+                        res = []
+                        with ThreadPoolExecutor() as exec:
+                            for r in exec.map(
+                                p.extract_dosar_data,
+                                [p[0] for p in paths],
+                                [articolul_num for _ in paths],
+                                [p[1] for p in paths],
+                            ):
+                                res.append(r)
+                            return res
+
+                    return await asyncio.to_thread(_pool)
+
+        async_tasks = [parse(self, num) for num in articolul_nums]
+        res = await asyncio.gather(*async_tasks)
+        return [
+            dosar
+            for articolul_group in res
+            for group in articolul_group
+            for dosar in group
+        ]
+
+    async def parse_dosars(
+        self, articolul_num: int | None = None
+    ) -> list[Dosar]:
+        articolul_nums = [articolul_num]
+        if not articolul_num:
+            articolul_nums = [10, 11]
+
+        return await self._parse_dosars(articolul_nums)
+
 
 async def main() -> None:  # noqa: D103
-    p = ParserCetatenie()
-    data = {"articolul_10": {"2024": []}, "articolul_11": {"2024": []}}
-    src_path = f"{time.time()}_{len(str(data))}"
-    result = await p.parse_articoluls(data, src_path)
-
-    with open("result.json", "w") as f:  # noqa: ASYNC101
-        f.write(json.dumps(result, indent=2))
+    p = ParserPDF()
+    s = ParserDosars()
+    result = await s.parse_dosars()
+    ...
 
 
 if __name__ == "__main__":

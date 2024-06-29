@@ -2,7 +2,8 @@ import json
 from datetime import datetime
 
 import pytest
-from bubble_parser.database import create_sqlalchemy_async_engine, write_result
+from bubble_parser.app_types import Dosar
+from bubble_parser.database import create_sqlalchemy_async_engine, write_dosars, write_result
 from bubble_parser.models import Base
 
 
@@ -24,3 +25,20 @@ async def test_write_result() -> None:
         start = datetime.now()
         await write_result(articolul_num=articolul_num, pdfs=pdfs)
         print(f"Articolur {articolul_num} takes a {datetime.now() - start}")
+
+
+@pytest.mark.asyncio()
+async def test_write_dosars():
+    dosars = [
+        Dosar(
+            num_dosar=1, date=datetime(2024, 5, 5), articolul_num=10, year=2024
+        )
+    ]
+    
+    engine = create_sqlalchemy_async_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+    
+    await write_dosars(dosars)

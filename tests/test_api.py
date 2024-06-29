@@ -28,3 +28,16 @@ async def test_get_updates() -> None:
     ) as resp:
         response = await resp.json()
         assert response["ok"] is True
+
+
+@pytest.mark.asyncio()
+async def test_dosars() -> None:
+    """Test for /get_dosars endpoint."""
+    session = aiohttp.ClientSession()
+    url = "http://127.0.0.1:7654"
+    async with session.post(
+        f"http://127.0.0.1:8000/get_dosars"
+    ) as resp:
+        response = await resp.json()
+        print(response)
+        assert response["ok"] is True
